@@ -1,0 +1,458 @@
+import bakery_canvas, bakery
+import matplotlib.pyplot as plt
+from bakery_canvas import get_courses
+from bakery_canvas import get_submissions
+from datetime import datetime
+"""
+Fall 2022 Canvas final project
+UD CS1 Bakery
+"""
+
+def count_courses(user_token: str) -> int:
+    """
+    This function consumes a user_token in the form of a str and returns the str as an int.
+    
+    Args:
+    user_token (str): This is the user_token, aka password for a specific student.
+    
+    Returns:
+    int: The number of courses that the user is taking. 
+    """
+    count = 0
+    courses = get_courses(user_token)
+    for course in courses:
+        count = count + 1
+    return count
+
+def find_cs1(user_token: str) -> int:
+    """
+    This function consumes a user_token in the form of a str and returns the course_id that has "CISC1" in it.
+    
+    Args:
+    user_token (str): This is the user_token, aka password for a specific student.
+    
+    Returns:
+    int: The id of the first Course that has the text "CISC1" in the code field. 
+    """
+    courses = get_courses(user_token)
+    found = None
+    for course in courses:
+        if "CISC1" in course.code:
+            found = course.id
+            return found
+    return 0
+def find_course(user_token: str, course_id: int) -> str:
+    """
+    This function consumes a user_token and course_id and returns the full name of the course that has the given id.
+    
+    Args:
+    user_token (str): This is the user_token, aka password for a specific student.
+    course_id (int): This is the id number for the course.
+    
+    Returns:
+    str: The name of the course with the given id. 
+    """
+    courses = get_courses(user_token)
+    found = None
+    for course in courses:
+        if course_id == course.id:
+            found = course.name
+            return found
+    return "no course found"
+
+def render_courses(user_token: str) -> str:
+    """
+    This function consumes a user_token and returns that student's courses and ids joined together.
+    
+    Args:
+    user_token(str): This is the user_token, aka password for a specific student.
+    
+    Returns:
+    str: The string of all the user's courses and their ids joined together. 
+    """
+    courses = get_courses(user_token)
+    a = ""
+    if not courses:
+        return ""
+    for course in courses:
+        a += str(course.id) + ": " + course.code + "\n"
+    return a
+
+def total_points(user_token: str, course_id: int) -> int:
+    '''
+    This functions consumes a user_token and course_id and returns the total points possible for the given course.
+    
+    Args:
+    user_token (str): Represents a student and the amount of courses that they are taking. 
+    course_id (int): The id number of the course that the student is taking. 
+    
+    Returns:
+    int: The total amount of points possible within a given course.
+    '''
+    submissions = get_submissions(user_token, course_id)
+    total = 0
+    for submission in submissions:
+        total = total + submission.assignment.points_possible
+    return total
+
+def count_comments(user_token: str, course_id: int) -> int:
+    '''
+    This function cosumes a user_token and course_id and returns that amount of comments within all submissions for that course.
+    
+    Args:
+    user_token (str): Represents a student and the amount of courses that they are taking. 
+    course_id (int): The id number of the course that the student is taking. 
+    
+    Returns:
+    The number of comments within all the submissions for that course.
+    '''
+    submissions = get_submissions(user_token, course_id)
+    count = 0
+    for submission in submissions:
+        for comment in submission.comments:
+            count = count + 1
+    return count
+
+def ratio_graded(user_token: str, course_id: int) -> str:
+    '''
+    This function consumes a user_token and course_id and returns the ratio of assignments graded over the total amount of assignments.
+    
+    Args:
+    user_token (str): Represents a student and the amount of courses that they are taking. 
+    course_id (int): The id number of the course that the student is taking. 
+    
+    Returns:
+    The ratio of assignments graded vs. total assignments as a str. 
+    '''
+    submissions = get_submissions(user_token, course_id)
+    count_graded = 0
+    count_assignments = 0
+    for submission in submissions:
+        count_assignments += 1
+        if submission.grade:
+            count_graded += 1
+    return str(count_graded) + "/" + str(count_assignments)
+
+def average_score(user_token: str, course_id: int) -> float:
+    '''
+    This function consumes a user_token and course_id and returns the unweighted score of all the assignments in the course.
+    
+    Args:
+    user_token (str): Represents a student and the amount of courses that they are taking. 
+    course_id (int): The id number of the course that the student is taking. 
+    
+    Returns:
+    The average unweighted score of all the assignments in the course as a float. 
+    '''
+    submissions = get_submissions(user_token, course_id)
+    count_sub_scores = 0
+    count_graded_points = 0
+    for submission in submissions:
+        count_sub_scores = count_sub_scores + submission.score
+        if submission.grade:
+            count_graded_points = count_graded_points + submission.assignment.points_possible
+    return count_sub_scores / count_graded_points
+
+def average_weighted(user_token: str, course_id:int) -> float:
+    '''
+    This function consumes a user_token and course_id and returns the average weighted score of all the assignments in the course.
+    
+    Args:
+    user_token (str): Represents a student and the amount of courses that they are taking. 
+    course_id (int): The id number of the course that the student is taking. 
+    
+    Returns:
+    The average weighted score of all the assignments in the course as a float. 
+    '''
+    submissions = get_submissions(user_token, course_id)
+    count_sub_scores = 0
+    count_graded_points = 0
+    for submission in submissions:
+        count_sub_scores = count_sub_scores + submission.score * submission.assignment.group.weight
+        if submission.grade:
+            count_graded_points = count_graded_points + submission.assignment.points_possible * submission.assignment.group.weight
+    return count_sub_scores / count_graded_points
+
+def average_group(user_token: str, course_id: int, group_name: str) -> float:
+    '''
+    This function consumes a user_token, course_id, and group_name and returns the unweighted average score of all the graded submissions that have group_name.
+    
+    Args:
+    user_token (str): Represents a student and the amount of courses that they are taking. 
+    course_id (int): The id number of the course that the student is taking. 
+    group_name (str): The name of the group in the assignment.
+    
+    Returns:
+    The unweighted average score of all the graded submissions that have group_name.
+    '''
+    submissions = get_submissions(user_token, course_id)
+    count_graded = 0.
+    count_sub = 0.
+    for submission in submissions:
+        if submission.grade and group_name.lower() == submission.assignment.group.name.lower():
+            count_graded = count_graded + submission.score
+            count_sub = count_sub + submission.assignment.points_possible
+    if count_sub == 0.0:
+        return count_sub
+    return count_graded /count_sub
+
+def render_assignment(user_token: str, course_id: int, assignment_id: int) -> str:
+    '''
+    This function consumes a user_token, course_id, and assignment_id and returns everything as one str.
+    
+    Args:
+    user_token (str): Represents a student and the amount of courses that they are taking. 
+    course_id (int): The id number of the course that the student is taking.
+    assignment_id (int): The id number of the assingment.
+    
+    Returns:
+    The assignment asubmission details as a str.
+    '''
+    submissions = get_submissions(user_token, course_id)
+    taking = True
+    for submission in submissions:
+        if taking:
+            if submission.grade:
+                full_str = str(assignment_id) + ":" + " " + submission.assignment.name + "\n" + "Group:" + " "+ submission.assignment.group.name + "\n"  + "Module:" + " " + submission.assignment.module + "\n"  +("Grade:" + " " + str(submission.score) + "/" + str(submission.assignment.points_possible) + " " 
+                "(" + submission.grade + ")")
+            else:
+                full_str =str(assignment_id) + ":" + " " + submission.assignment.name + "\n" + "Group:" + " " + submission.assignment.group.name + "\n"  + "Module:" + " " + submission.assignment.module + "\n" + "Grade:" + " " + "(missing)"
+        if assignment_id == submission.assignment.id:
+            taking = False
+    if taking:
+        full_str = "Assignment not found:" + " " + str(assignment_id) 
+    return full_str
+
+def render_all(user_token: str, course_id: int) -> str:
+    '''
+    This function consumes a user_token and course_id and returns a single string that describes all of the submissions in the course.
+    
+    Args:
+    user_token (str): Represents a student and the amount of courses that they are taking. 
+    course_id (int): The id number of the course that the student is taking.
+    
+    Returns:
+    A single string that describes all of the submissions in the course.
+    '''
+    submissions = get_submissions(user_token, course_id)
+    full_str = ''
+    for submission in submissions:
+        full_str = full_str + str(submission.assignment.id) + ': ' + submission.assignment.name 
+        if submission.grade:
+            full_str = full_str + ' (graded)\n'
+        else:
+            full_str = full_str + ' (ungraded)\n'
+    return full_str   
+
+def plot_scores(user_token: str, course_id: int):
+    '''
+    This function consumes a user_token and course_id and creates a graph representing the distribution of the fractional scores in the course. 
+    
+    Args:
+    user_token (str): Represents a student and the amount of courses that they are taking.
+    course_id (int): The id number of the course that the student is taking. 
+    '''
+    submissions = get_submissions(user_token, course_id)
+    data = []
+    for submission in submissions:
+        if submission.grade:
+            data.append(submission.score/submission.assignment.points_possible * 100)
+
+            
+    plt.hist(data)
+    plt.title("Score vs. Points Possible")
+    plt.xlabel("Score")
+    plt.ylabel("Points Possible")
+    plt.show()
+
+def days_apart(first_date: str, second_date: str) -> int:
+    """
+    Determines the days between `first` and `second` date.
+    Do not modify this function!
+    """
+    first_date = datetime.strptime(first_date, "%Y-%m-%dT%H:%M:%S%z")
+    second_date = datetime.strptime(second_date, "%Y-%m-%dT%H:%M:%S%z")
+    difference = second_date - first_date
+    return difference.days
+
+def plot_earliness(user_token: str, course_id: int):
+    '''
+    This function consumes a user_token and course_id and creates a graph representing the distribution of the lateness of each submission.
+    
+    Args:
+    user_token (str): Represents a student and the amount of courses that they are taking.
+    course_id (int): The id number of the course that the student is taking. 
+    '''
+    submissions = get_submissions(user_token, course_id)
+    lateness = []
+    for submission in submissions:
+        if submission.submitted_at and submission.assignment.due_at != " ":
+            lateness.append(days_apart(submission.submitted_at , submission.assignment.due_at))
+            
+    plt.hist(lateness)
+    plt.title("Submitted vs. Due")
+    plt.xlabel("Submitted")
+    plt.ylabel("Due")
+    plt.show()
+ 
+def plot_points(user_token: str, course_id: int):
+    '''
+    This function consumers a user_token and course_id and graphs a scatter plot comparing the points possible for each assignment with the weighted points possible for that assignment.
+    
+    Args:
+    user_token (str): Represents a student and the amount of courses that they are taking.
+    course_id (int): The id number of the course that the student is taking. 
+    '''
+    submissions = get_submissions(user_token, course_id)
+    total_weighted = 0
+    weighted_points = []
+    points = 0
+    xs = []
+    ys = []
+    for submission in submissions:
+        points =+ submission.assignment.points_possible
+        total_weighted = total_weighted + (submission.assignment.points_possible * submission.assignment.group.weight)/100
+        weighted_points.append(submission.assignment.points_possible * submission.assignment.group.weight)
+        xs.append(submission.assignment.points_possible)
+    for points in weighted_points:
+        points = points/total_weighted
+        ys.append(points)
+    if total_weighted == 0:
+            return
+  
+    plt.scatter(xs, ys)
+    plt.title("Total Possible Points vs. Weighted Possible Points")
+    plt.xlabel("Total Possible Points")
+    plt.ylabel("Weighted Possible Points")
+    plt.show()
+
+def predict_grades(user_token: str, course_id: int):
+    '''
+    This function consumes a user_token and course_id and creates a graph that represents  the three running sums (max_points, max_score, min_score)
+    
+    Args:
+    user_token (str): Represents a student and the amount of courses that they are taking.
+    course_id (int): The id number of the course that the student is taking. 
+    '''
+    submissions = get_submissions(user_token, course_id)
+    total_weighted = 0
+    current_weighted = 0
+    run_high = 0
+    run_low = 0
+    max_points = []
+    max_score = []
+    min_score = []
+    for submission in submissions:
+        total_weighted = total_weighted + ((submission.assignment.points_possible * submission.assignment.group.weight)/100)
+    for submission in submissions:
+        current_weighted += submission.assignment.points_possible * submission.assignment.group.weight
+        max_points.append(current_weighted/total_weighted)
+        if submission.grade:
+            run_high += submission.score * submission.assignment.group.weight
+            run_low += submission.score * submission.assignment.group.weight
+                       
+        else:
+            run_high += submission.assignment.points_possible * submission.assignment.group.weight
+        max_score.append((run_high)/total_weighted)
+        min_score.append((run_low)/total_weighted) 
+    
+    plt.plot(max_points, label = "max_points")
+    plt.plot(max_score, label = "max_score")
+    plt.plot(min_score, label = "min_score")
+    plt.title("Assignment vs. Course Grade")
+    plt.xlabel("Assignment")
+    plt.ylabel("Course Grade")
+    plt.legend()
+    plt.show()
+    
+def execute(command: str, user_token: str, course_id: int) -> int:
+    """
+    This functions consumes a command, user_token, and course_id and retunrs an int, which is the course_id.
+    
+    Args:
+    command (str): A string that the user inputs
+    user_token (str): This is the user_token, aka password for a specific student.
+    course_id (int): This is the id number for the course.
+    """
+    if command == "course":
+        print(render_courses(user_token))
+        user_input = input("Insert a new course ID:")
+        print(find_course(user_token, int(user_input)))
+        return (int(user_input))
+    if command == "exit":
+        return 0
+    elif command == "points":
+        user_input = course_id
+        a = total_points(user_token, course_id)
+        print(a)
+    elif command == "comments":
+        #user_input = course_id
+        b = count_comments(user_token, course_id)
+        print(b)
+    elif command == "graded":
+        #user_input = course_id
+        c = ratio_graded(user_token, course_id)
+        print(c)
+    elif command == "score_unweighted":
+        #user_input = course_id
+        d = average_score(user_token, course_id)
+        print(d)
+    elif command == "score":
+        #user_input = course_id
+        e = average_weighted(user_token, course_id)
+        print(e)
+    elif command == "group":
+        #user_input = course_id
+        group_name = input("Insert group name:")
+        f = average_group(user_token, course_id, group_name)
+        print(f)
+    elif command == "assignment":
+        #user_input = course_id
+        assignment_id = input("Insert assignment ID:")
+        g = render_assignment(user_token, (course_id), int(assignment_id))
+        print(g)
+    elif command == "list":
+        #user_input = course_id
+        h = render_all(user_token, course_id)
+        print(h)
+    elif command == "scores":
+        #user_input = course_id
+        (plot_scores(user_token, course_id))
+    elif command == "earliness":
+        #user_input = course_id
+        (plot_earliness(user_token, course_id))
+    elif command == "compare":
+        #user_input = course_id
+        (plot_points(user_token, course_id))
+    elif command == "predict":
+        #user_input = course_id
+        (predict_grades(user_token, course_id))
+    elif command == "help":
+        print("exit - Exit the application",
+             "help - List all the commands", "course - Change current course",
+             "points - Print total points in course", "comments - Print how many comments in course",
+             "graded - Print ratio of ungraded/graded assignments", "score_unweighted - Print average unweighted score",
+             "score - Print average weighted score", "group - Print average of assignment group, by name",
+             "assignment - Print the details of a specific assignment, by ID", "list - List all the assignments in the course",
+             "scores - Plot the distribution of grades in the course", "earliness - Plot the distribution of the days assignments were submitted early",
+             "compare - Plot the relationship between assignments' points possible and their weighted points possible",
+             "predict - Plot the trends in grades over assignments, showing max ever possible, max still possible, and minimum still possible")  
+    return course_id
+    
+def main(user_token: str):
+    """
+    This function consumes a user_token, which is the set of classes that a student takes.
+    
+    Args:
+    user_token (str): This is the user_token, aka password for a specific student. 
+    """
+    if count_courses(user_token) == 0:
+        print("No courses available")
+        return
+    current_course_id = find_cs1(user_token)
+    if current_course_id == 0:
+        current_course_id = get_courses(user_token)[0].id
+    while current_course_id > 0:
+        user_input = input("What do you want to do? course, exit, or help")
+        a = execute(user_input, user_token, current_course_id)
+        current_course_id = a
